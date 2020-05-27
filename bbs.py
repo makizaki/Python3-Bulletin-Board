@@ -3,6 +3,7 @@
 # enable debugging
 import cgitb
 cgitb.enable()
+import textwrap
 import os, sys, io, cgi
 sys.path.append('/home/makizaki/.local/lib/python3.8/site-packages')
 import MySQLdb
@@ -18,6 +19,7 @@ print( """
     </haed>
     <body>
             <form action ="bbs.py" method="post">
+            <input type = "hidden" name= "method" value="post">
             <div>
                 <label for="name">氏名</label>
                 <input id="name" type="text" name="name" >
@@ -34,7 +36,7 @@ print( """
 
             """)
 
-
+#接続
 con = MySQLdb.connect(
 user='test',
 passwd='test',
@@ -43,15 +45,21 @@ db='bbs_db',
 charset="utf8")
 cur= con.cursor()
 
-#データ送信
-name = form.getvalue('name', '')
-content = form.getvalue('content', '')
-sql = 'insert into bbs_tb(name, content) values (%s, %s)'
-cur.execute(sql, (name, content))
-con.commit()
+#リダイレクト
+def redirect():
+            source =textwrap.dedent( '''
+            <html>
+                <head>
+                    <meta http-equiv="refresh" content=0; url=./bbs.py">
+                </head>
+                <body>
+                    メッセージの登録に成功しました。
+                </body>
+            </html>
+            ''' )
+            print(source)
 
 #表示
-sql = "select * from bbs_tb "
 cur.execute("select * from bbs_tb order by id desc;")
 rows = cur.fetchall()
 for row in rows:
@@ -65,5 +73,20 @@ for row in rows:
             )
     print(post_text)
 
+name = form.getvalue('name')
+content = form.getvalue('content')
+method = form.getvalue('method')
+
+#条件
+if(method == 'post' and not name == "" and not content ==""):
+        sql = 'insert into bbs_tb(name, content) values (%s, %s)'
+        cur.execute(sql, (name, content))
+        con.commit()
+        redirect()
+elif(method == 'post'and (name == "" or content =="")):
+                 print("""
+                 <p id='error_message'>
+                 表示名かメッセージが入力されていません</p>
+                 """)
 cur.close
 con.close
